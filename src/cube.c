@@ -19,12 +19,11 @@ static Line new_line(Point start, Point end) {
   Line new_line;
 
   for (int i = 1; i < n; i++) {
-		double t = ((double)i) / (n - 1);
+    double t = ((double)i) / (n - 1);
 
-    new_line.points[i] =
-        new_point(start.x + t * (end.x - start.x),
-									start.y + t * (end.y - start.y),
-									start.z + t * (end.z - start.z));
+    new_line.points[i] = new_point(start.x + t * (end.x - start.x),
+                                   start.y + t * (end.y - start.y),
+                                   start.z + t * (end.z - start.z));
   }
 
   return new_line;
@@ -38,14 +37,13 @@ static Plane new_plane(Line first, Line second) {
 
   int n = 64;
   for (int i = 0; i < n; i++) {
-		// for each point in the starting line we draw another line
-		// to the corresponding point in the ending line, to create a plane
+    // for each point in the starting line we draw another line
+    // to the corresponding point in the ending line, to create a plane
     new_plane.lines[i] = new_line(first.points[i], second.points[i]);
   }
 
   return new_plane;
 }
-
 
 // note that the names of the points here will be meaningless
 // once you start rotating them, they only make sense during
@@ -57,9 +55,9 @@ CubePoints new_cube(double side_len) {
 
   const double half_side = side_len / 2;
 
-	// west is x-, east is x+
-	// bottom is y-, top is y+
-	// south is z+, north is z-
+  // west is x-, east is x+
+  // bottom is y-, top is y+
+  // south is z+, north is z-
   Point top_north_west = new_point(-half_side, half_side, (-half_side));
   Point top_north_east = new_point(half_side, half_side, (-half_side));
 
@@ -87,24 +85,24 @@ Cube render_cube(CubePoints cp) {
   Line top_north = new_line(cp.corners[0], cp.corners[1]);
   Line top_south = new_line(cp.corners[2], cp.corners[3]);
 
-	Plane top = new_plane(top_north, top_south);
+  Plane top = new_plane(top_north, top_south);
 
   Line bottom_north = new_line(cp.corners[4], cp.corners[5]);
   Line bottom_south = new_line(cp.corners[6], cp.corners[7]);
 
-	Plane bottom = new_plane(bottom_north, bottom_south);
-	Plane north = new_plane(top_north, bottom_north);
-	Plane south = new_plane(top_south, bottom_south);
+  Plane bottom = new_plane(bottom_north, bottom_south);
+  Plane north = new_plane(top_north, bottom_north);
+  Plane south = new_plane(top_south, bottom_south);
 
   Line top_west = new_line(cp.corners[0], cp.corners[2]);
   Line bottom_west = new_line(cp.corners[4], cp.corners[6]);
 
-	Plane west = new_plane(top_west, bottom_west);
+  Plane west = new_plane(top_west, bottom_west);
 
   Line top_east = new_line(cp.corners[1], cp.corners[3]);
   Line bottom_east = new_line(cp.corners[5], cp.corners[7]);
 
-	Plane east = new_plane(top_east, bottom_east);
+  Plane east = new_plane(top_east, bottom_east);
 
   Cube new_cube = {.side = cp.side,
                    .planes = {top, bottom, north, east, south, west}};
@@ -220,7 +218,7 @@ static ProjectedPoint to_2d(Point p) {
 // performance is wildly bad i can look up how to
 // do this properly
 
-void *make_zuffer(Cube *c, int rows, int cols) {
+void *make_zuffer(CubePoints *cp, int rows, int cols) {
   // feels ugly to return void and cast result
   // but i don't feel that the other options are
   // all that much cleaner
@@ -245,13 +243,15 @@ void *make_zuffer(Cube *c, int rows, int cols) {
   //  Simulated 2d arr with only 1 real dimension
   // ProjectedPoint *puffer = malloc(40 * 40 * sizeof *puffer);
 
+	Cube c = render_cube(*cp);
+
   // VLA pointer (variably modified type)
   // ProjectedPoint(*zuffer)[rows][cols] = malloc(sizeof *zuffer);
   ProjectedPoint(*zuffer)[rows][cols] = (malloc(sizeof *zuffer));
 
   // initialize for comparison
-  for (int y = 0; y < 40; y++) {
-    for (int x = 0; x < 40; x++) {
+  for (int y = 0; y < rows; y++) {
+    for (int x = 0; x < cols; x++) {
       // INFINITY is a macro from math.h, there is also -INFINITY
       ProjectedPoint init_prp = {.distance = INFINITY};
       (*zuffer)[y][x] = init_prp;
@@ -261,15 +261,16 @@ void *make_zuffer(Cube *c, int rows, int cols) {
   for (int i = 0; i < 6; i++) {
     for (int j = 0; j < 64; j++) {
       for (int k = 0; k < 64; k++) {
-        // this feels supremely ugly and inefficient
-        // maybe this is just how it is, idk
-        // point coords can be neg, so offset by 20
-        // subtract 1 for indexing
 
-        ProjectedPoint pr_p = to_2d(c->planes[i].lines[j].points[k]);
-        int x_index = 20 + pr_p.x;
-        int y_index = 20 + pr_p.y;
-        if (x_index < 0 || x_index > 39 || y_index < 0 || y_index > 39) {
+				// this gigantic for loop feels wrong, but i can't
+				// think of a shortcut...
+
+        ProjectedPoint pr_p = to_2d(c.planes[i].lines[j].points[k]);
+        int x_index = (cols / 2) + pr_p.x;
+        int y_index = (rows / 2) + pr_p.y;
+        if (x_index < 0 || x_index > cols || y_index < 0 ||
+            y_index > rows) {
+					// if pixel doesn't fit, discard it
           continue;
         }
         if ((*zuffer)[y_index][x_index].distance > pr_p.distance) {
@@ -282,5 +283,7 @@ void *make_zuffer(Cube *c, int rows, int cols) {
   // array in main loop after printing
   return zuffer;
 }
+// macro to ensure that when we call this function, the result is
+// casted appropriately
 #define make_zuffer(C, ROWS, COLS)                                             \
   ((ProjectedPoint(*)[ROWS][COLS])make_zuffer(C, ROWS, COLS))

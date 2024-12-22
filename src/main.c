@@ -5,27 +5,31 @@
 
 #include "cube.h"
 
+// how much wider to draw the screen
 #define GRAPHICAL_X_MULTIPLIER 2
-#define CANVAS_HEIGHT 40
-#define CANVAS_WIDTH 40
 
-// make some constant radians value to rotate by
+// make some constant radians value to rotate by,
+// 2.0 * M_PI / 600.0 -> a full rotation takes 10 sec
 #define ROTATION_RADIANS (2.0 * M_PI / 600.0)
 
+#define MIN(A, B) ((A < B) ? A : B)
+
+// just for convenience, converting "normal" colors
+// to colors usable in ncurses
 int nc_col(double v) { return (int)(v / 256 * 1000); }
 
+// rotation that varies
 void rotate_c(CubePoints *cp, double *rotation_rad) {
-	*rotation_rad += (2.0 * M_PI) / 3000;
-	*rotation_rad = fmod(*rotation_rad, (2.0 * M_PI));
+  *rotation_rad += (2.0 * M_PI) / 3000;
+  *rotation_rad = fmod(*rotation_rad, (2.0 * M_PI));
 
-	x_rotation(cp, cos(*rotation_rad) * ROTATION_RADIANS);
-	y_rotation(cp, sin(*rotation_rad) * ROTATION_RADIANS);
+  x_rotation(cp, cos(*rotation_rad) * ROTATION_RADIANS);
+  y_rotation(cp, sin(*rotation_rad) * ROTATION_RADIANS);
 }
 
 int main() {
 
-  // ncurses init, kinda just boilerplate
-  // not everything is strictly needed i don't think
+  // ncurses init, not everything is strictly needed
   initscr();
   cbreak();
   noecho();
@@ -43,39 +47,40 @@ int main() {
   init_pair(1, 1, COLOR_BLACK);
   init_pair(2, 2, COLOR_BLACK);
 
-  // find center, offset a little to try and center it dirtily
-  double center_y = LINES / 1.9;
-  double center_x = COLS / 1.9;
-  // "canvas" is 40x40
-  int start_y = center_y + 0 - CANVAS_HEIGHT / 2.0;
-  int start_x = center_x + 0 - CANVAS_WIDTH * 2.0;
-
   refresh();
 
-  // make a cube
-  CubePoints cp = new_cube(32);
+  // available drawing area; x is divided by 2 becaue
+  // we will stretch the drawing by 2 horizontally to
+  // make the dimensions appear even
+  int lines = LINES;
+  int cols = COLS / GRAPHICAL_X_MULTIPLIER;
 
-	// two choices, either we change rotation after a full rotation,
-	// or we vary the amount of rotation depending on a function.
-	double rotation_rad = 0;
+  // make a cube
+	int cube_side_len = MIN(lines, cols);
+  CubePoints cp = new_cube(cube_side_len);
+
+  // two choices, either we change rotation after a full rotation,
+  // or we vary the amount of rotation depending on a function.
+  double rotation_rad = 0;
 
   while (1) {
     // main loop
     erase();
 
     // mvprintw(0, 0, "Frames: %d", frames_drawn);
-    // mvprintw(0, COLS - 1 - 3, "%d", COLS);  // 213
-    // mvprintw(1, COLS - 1 - 2, "%d", LINES); // 45
+    // mvprintw(0, cols - 1 - 3, "%d", cols);  // 213
+    // mvprintw(1, cols - 1 - 2, "%d", LINES); // 45
 
     // render the cube
-    Cube c = render_cube(cp);
+    // Cube c = render_cube(cp);
 
     // get a zbuffer -- remember to free this
-    ProjectedPoint(*zb)[40][40] = make_zuffer(&c, 40, 40);
+    ProjectedPoint(*zb)[lines][cols] = make_zuffer(&cp, lines, cols);
 
+    // this is dumb, must generalize
     double max_distance = -INFINITY;
-    for (int y = 0; y < 40; y++) {
-      for (int x = 0; x < 40; x++) {
+    for (int y = 0; y < lines; y++) {
+      for (int x = 0; x < cols; x++) {
         // draw each cell
         if ((*zb)[y][x].distance != INFINITY) {
           double dist = (*zb)[y][x].distance;
@@ -90,43 +95,39 @@ int main() {
     // point_distance / max_distance will always be 0 < d < 1
     // so we can draw different chars at different fractions of 1
 
-    for (int y = 0; y < 40; y++) {
-      for (int x = 0; x < 40; x++) {
+    for (int y = 0; y < lines; y++) {
+      for (int x = 0; x < cols; x++) {
         // draw each cell
         if ((*zb)[y][x].distance != INFINITY) {
           double dist_float = (*zb)[y][x].distance / max_distance;
 
-          // i need to scale the output so the x is wider
-          // i should also center it
-          int nc_y = y + start_y;
-          int nc_x = x + start_x;
-
+          // UGLY
           if (dist_float < 0.5) {
             attron(A_BOLD);
-						attron(COLOR_PAIR(1));
-            mvprintw(nc_y, nc_x * GRAPHICAL_X_MULTIPLIER, "00");
-						attroff(COLOR_PAIR(1));
+            attron(COLOR_PAIR(1));
+            mvprintw(y, x * GRAPHICAL_X_MULTIPLIER, "00");
+            attroff(COLOR_PAIR(1));
             attroff(A_BOLD);
           } else if (dist_float < 0.6) {
-						attron(COLOR_PAIR(1));
-            mvprintw(nc_y, nc_x * GRAPHICAL_X_MULTIPLIER, "00");
-						attroff(COLOR_PAIR(1));
+            attron(COLOR_PAIR(1));
+            mvprintw(y, x * GRAPHICAL_X_MULTIPLIER, "00");
+            attroff(COLOR_PAIR(1));
           } else if (dist_float < 0.7) {
-						attron(COLOR_PAIR(1));
-            mvprintw(nc_y, nc_x * GRAPHICAL_X_MULTIPLIER, "OO");
-						attroff(COLOR_PAIR(1));
+            attron(COLOR_PAIR(1));
+            mvprintw(y, x * GRAPHICAL_X_MULTIPLIER, "OO");
+            attroff(COLOR_PAIR(1));
           } else if (dist_float < 0.8) {
-						attron(COLOR_PAIR(1));
-            mvprintw(nc_y, nc_x * GRAPHICAL_X_MULTIPLIER, "oo");
-						attroff(COLOR_PAIR(1));
+            attron(COLOR_PAIR(1));
+            mvprintw(y, x * GRAPHICAL_X_MULTIPLIER, "oo");
+            attroff(COLOR_PAIR(1));
           } else if (dist_float < 0.9) {
-						attron(COLOR_PAIR(2));
-            mvprintw(nc_y, nc_x * GRAPHICAL_X_MULTIPLIER, "oo");
-						attroff(COLOR_PAIR(2));
+            attron(COLOR_PAIR(2));
+            mvprintw(y, x * GRAPHICAL_X_MULTIPLIER, "oo");
+            attroff(COLOR_PAIR(2));
           } else if (dist_float < 1.0) {
-						attron(COLOR_PAIR(2));
-            mvprintw(nc_y, nc_x * GRAPHICAL_X_MULTIPLIER, "..");
-						attroff(COLOR_PAIR(2));
+            attron(COLOR_PAIR(2));
+            mvprintw(y, x * GRAPHICAL_X_MULTIPLIER, "..");
+            attroff(COLOR_PAIR(2));
           }
         }
       }
@@ -144,7 +145,7 @@ int main() {
 
     // x_rotation(&cp, ROTATION_RADIANS);
     // y_rotation(&cp, ROTATION_RADIANS);
-		rotate_c(&cp, &rotation_rad);
+    rotate_c(&cp, &rotation_rad);
 
     // enable quitting
     int ch;

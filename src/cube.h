@@ -100,4 +100,4 @@ void y_rotation(CubePoints *cp, double theta);
 
 // void *make_zuffer(Cube *c, int rows, int cols);
 // ProjectedPoint (*make_zuffer(Cube *c, int rows, int cols))[];
-void *make_zuffer(Cube *c, int rows, int cols);
+void *make_zuffer(CubePoints *cp, int rows, int cols);

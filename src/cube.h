@@ -1,36 +1,22 @@
-// 3D Point -- should this be a vector?
+#define CUBE_CORNERS 8
+#define CUBE_SIDES 6
+
+// 3D Point
 typedef struct {
   double x;
   double y;
   double z;
 } Point;
 
-// Line between two points
-typedef struct {
-  Point points[64];
-} Line;
-
-// a plane is a collection of lines
-// built from two parallel lines (that
-// are drawn in the SAME DIRECTION)
-typedef struct {
-  Line lines[64];
-} Plane;
-
-// here is a 'cube' that you will actually rotate
-// you then pass it to a render_cube function to calculate the planes
+// here is a "cube" of points that you will actually rotate
+// during the process of drawing, a complete cube is
+// rendered from the corners
 typedef struct {
   int side;
-  Point corners[8];
+  Point corners[CUBE_CORNERS];
 } CubePoints;
 
-// the full cube is only drawn once per frame, then
-// discarded before rotating only the corners
-typedef struct {
-  int side;
-  Plane planes[6];
-} Cube;
-
+// a point that has been projected on to a 2d plane
 typedef struct {
   int x;
   int y;
@@ -38,11 +24,9 @@ typedef struct {
 } ProjectedPoint;
 
 CubePoints new_cube(double side_len);
-Cube render_cube(CubePoints cp);
 
 void x_rotation(CubePoints *cp, double theta);
 void y_rotation(CubePoints *cp, double theta);
 
-// void *make_zuffer(Cube *c, int rows, int cols);
-// ProjectedPoint (*make_zuffer(Cube *c, int rows, int cols))[];
-void *make_zuffer(CubePoints *cp, double proj_d, double cube_d, int rows, int cols);
+void *make_zbuffer(CubePoints *cp, double proj_d, double cube_d, int rows,
+                   int cols);

@@ -56,7 +56,7 @@ int main() {
   int cols = COLS / GRAPHICAL_X_MULTIPLIER;
 
   // make a cube
-	int cube_side_len = MIN(lines, cols);
+  int cube_side_len = MIN(lines, cols);
   CubePoints cp = new_cube(cube_side_len);
 
   // two choices, either we change rotation after a full rotation,
@@ -75,7 +75,11 @@ int main() {
     // Cube c = render_cube(cp);
 
     // get a zbuffer -- remember to free this
-    ProjectedPoint(*zb)[lines][cols] = make_zuffer(&cp, lines, cols);
+    // proj_d = distance from viewer to projection plane
+    // cube_d = distance to move the cube before projecting
+    // make_zuffer(CubePoints *cp, double proj_d, double cube_d,
+    //   int lines, int cols)
+    ProjectedPoint(*zb)[lines][cols] = make_zuffer(&cp, 20.0, 55.0, lines, cols);
 
     // this is dumb, must generalize
     double max_distance = -INFINITY;

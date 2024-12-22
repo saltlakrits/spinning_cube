@@ -117,9 +117,10 @@ Cube render_cube(CubePoints cp) {
 
 // basically just copied these matrices from the web
 void x_rotation(CubePoints *cp, double theta) {
-  // to start, i will do the simplest rotation i can think of
-
   /*
+   * transformation matrices:
+   *
+   * rotate a point around x axis:
    * [1 0 0]
    * [0 cos(theta) -sin(theta)]
    * [0 sin(theta) cos(theta)]
@@ -129,6 +130,7 @@ void x_rotation(CubePoints *cp, double theta) {
    * [y]
    * [z]
    *
+   * which looks like this:
    * (x * 1 + y * 0 + z  *0) = x'
    * (x * 0 + y * cos(theta) + z * -sin(theta)) = y'
    * (x * 0 + y * sin(theta) + z * cos(theta)) = z'
@@ -138,8 +140,10 @@ void x_rotation(CubePoints *cp, double theta) {
    * x rotation matrix with y rotation matrix, then multiply
    * that with a vector to get new coords)
    *
-   * matrix multiplication is weird tho so look it up before
-   * writing stuff
+   * in code, i think you can just perform one
+   * rotation before the next instead of multiplying matrices,
+   * i am not sure if there is a practical difference in result
+   * or efficiency.
    */
 
   // might need to use doubles for x, y, z before casting final result
@@ -156,13 +160,15 @@ void x_rotation(CubePoints *cp, double theta) {
 }
 
 void y_rotation(CubePoints *cp, double theta) {
-  // needs fixing
-  // [ cos(θ)  0  sin(θ) ]
-  // [ 0       1   0     ]
-  // [ -sin(θ) 0  cos(θ) ]
-  // [x]
-  // [y]
-  // [z]
+  /*
+	 * rotation around y axis:
+	 * [ cos(θ)  0  sin(θ) ]
+	 * [ 0       1   0     ]
+	 * [ -sin(θ) 0  cos(θ) ]
+	 * [x]
+	 * [y]
+	 * [z]
+   */
 
   for (int i = 0; i < 8; i++) {
     double x = cp->corners[i].x;
@@ -175,32 +181,21 @@ void y_rotation(CubePoints *cp, double theta) {
   }
 }
 
-// imagine the camera is at (0, 0, 20) or such -- the z just needs to be
-// a little bigger than the center -> corner distance,
-// which is:
-// (sqrt(3)/2)*side
-// but the specifics aren't too important rn
-
-// need to find all projected points for the cube,
-// and write them to a buffer?
-// if we find that a spot is taken in the buffer,
-// we compare their distances and pick the lowest distance
-// point for the buffer
-// when done, we print the buffer to the terminal
-
-static ProjectedPoint to_2d(Point p) {
+static ProjectedPoint to_2d(Point p, double proj_d, double cube_d) {
 
   // camera is at origin, (0, 0, 0)
 
   // projection plane is at some distance from viewer.
   // this is constant for the calculation,
   // but arbitrarily chosen as far as i can tell.
-  const double proj_d = 29.0;
+	// well, not arbitrarily, because the choosing how
+	// close to the camera the projection plane is
+	// as well as how far you move the object is key
+	// to making it appear as you want
 
   // throw the point way back
-  double pushed_z = p.z - 50;
-  // 50 should be more than enough?
-  // const double new_z = 2.0;
+  double pushed_z = p.z - cube_d;
+
   // now we find new x and y
   // y' = y * z' / z
   // obviously same for x'
@@ -217,42 +212,20 @@ static ProjectedPoint to_2d(Point p) {
 // not a real zbuffer, just how i imagine it, if the
 // performance is wildly bad i can look up how to
 // do this properly
-
-void *make_zuffer(CubePoints *cp, int rows, int cols) {
-  // feels ugly to return void and cast result
-  // but i don't feel that the other options are
-  // all that much cleaner
-
+void *make_zuffer(CubePoints *cp, double proj_d, double cube_d, int rows,
+                  int cols) {
   // Cubes have 6 planes
-  // planes have 8 lines
-  // lines have 8 points
+  // planes have n lines
+  // lines have n points
 
-  // LINES will be like 40-45
-  // COLS is way more, so let's do 40x40
-  // ProjectedPoint buffer[40][40];
-
-  // this will probably need its own typedef and associated
-  // create_zuffer() and free_zuffer() functions when
-  // generalized to arbitrary cubes
-  // ProjectedPoint **puffer = malloc(40 * sizeof(*puffer));
-  // for (int i = 0; i < 40; i++) {
-  //   puffer[i] = malloc(40 * sizeof(**puffer));
-  // }
-  // ProjectedPoint (*puffer)[40] = malloc(40 * sizeof(*puffer));
-
-  //  Simulated 2d arr with only 1 real dimension
-  // ProjectedPoint *puffer = malloc(40 * 40 * sizeof *puffer);
-
-	Cube c = render_cube(*cp);
+  Cube c = render_cube(*cp);
 
   // VLA pointer (variably modified type)
-  // ProjectedPoint(*zuffer)[rows][cols] = malloc(sizeof *zuffer);
   ProjectedPoint(*zuffer)[rows][cols] = (malloc(sizeof *zuffer));
 
   // initialize for comparison
   for (int y = 0; y < rows; y++) {
     for (int x = 0; x < cols; x++) {
-      // INFINITY is a macro from math.h, there is also -INFINITY
       ProjectedPoint init_prp = {.distance = INFINITY};
       (*zuffer)[y][x] = init_prp;
     }
@@ -262,15 +235,15 @@ void *make_zuffer(CubePoints *cp, int rows, int cols) {
     for (int j = 0; j < 64; j++) {
       for (int k = 0; k < 64; k++) {
 
-				// this gigantic for loop feels wrong, but i can't
-				// think of a shortcut...
+        // this gigantic for loop feels wrong, but i can't
+        // think of a shortcut...
 
-        ProjectedPoint pr_p = to_2d(c.planes[i].lines[j].points[k]);
+        ProjectedPoint pr_p =
+            to_2d(c.planes[i].lines[j].points[k], proj_d, cube_d);
         int x_index = (cols / 2) + pr_p.x;
         int y_index = (rows / 2) + pr_p.y;
-        if (x_index < 0 || x_index > cols || y_index < 0 ||
-            y_index > rows) {
-					// if pixel doesn't fit, discard it
+        if (x_index < 0 || x_index > cols || y_index < 0 || y_index > rows) {
+          // if pixel doesn't fit, discard it
           continue;
         }
         if ((*zuffer)[y_index][x_index].distance > pr_p.distance) {

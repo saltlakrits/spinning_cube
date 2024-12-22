@@ -5,16 +5,14 @@
 
 #include "cube.h"
 
-//#define make_zuffer(C, ROWS, COLS) ((ProjectedPoint(*)[ROWS][COLS])make_zuffer(C, ROWS, COLS))
-
-typedef struct {
-	int x;
-} SomeStruct;
+#define GRAPHICAL_X_MULTIPLIER 2
+#define CANVAS_HEIGHT 40
+#define CANVAS_WIDTH 40
 
 int main() {
 
   // ncurses init, kinda just boilerplate
-	// not everything is strictly needed
+	// not everything is strictly needed i don't think
   initscr();
   cbreak();
   noecho();
@@ -23,6 +21,13 @@ int main() {
   nodelay(stdscr, TRUE);
 	// if color this is needed
   // start_color();
+
+	// find center
+	int center_y = LINES / 2;
+	int center_x = COLS / 2;
+	// "canvas" is 40x40
+	int start_y = center_y + 2 - CANVAS_HEIGHT / 2;
+	int start_x = center_x + 4 - CANVAS_WIDTH * 2;
 
 	refresh();
 
@@ -37,9 +42,9 @@ int main() {
 		// main loop
 		erase();
 
+		mvprintw(0, 0, "Frames: %d", frames_drawn);
 		mvprintw(0, COLS-1-3, "%d", COLS); // 213
 		mvprintw(1, COLS-1-2, "%d", LINES); // 45
-		mvprintw(2, COLS-1-10, "%d", frames_drawn);
 
 		// render the cube
 		Cube c = render_cube(cp);
@@ -69,26 +74,37 @@ int main() {
 				// draw each cell
 				if ((*zb)[y][x].distance != INFINITY) {
 					double dist_float = (*zb)[y][x].distance / max_distance;
-					// print some char
-					// mvprintw(y, x + 50, "%c", '@');
+
+					// i need to scale the output so the x is wider
+					// i should also center it
+					int nc_y = y + start_y;
+					int nc_x = x + start_x;
+
 					if (dist_float < 0.5) {
 						attron(A_BOLD);
-						mvprintw(y, x, "O");
+						mvprintw(nc_y, nc_x * GRAPHICAL_X_MULTIPLIER, "00");
 						attroff(A_BOLD);
 					} else if (dist_float < 0.7) {
-						mvprintw(y, x, "O");
-					// } else if (dist_float < 0.5) {
-					//	mvprintw(y, x, "o");
+						mvprintw(nc_y, nc_x * GRAPHICAL_X_MULTIPLIER, "OO");
 					} else if (dist_float < 0.9) {
-						mvprintw(y, x, "o");
+						mvprintw(nc_y, nc_x * GRAPHICAL_X_MULTIPLIER, "oo");
 					} else if (dist_float < 1.0) {
-						mvprintw(y, x, ".");
+						mvprintw(nc_y, nc_x * GRAPHICAL_X_MULTIPLIER, "..");
 					}
 				}
 			}
 		}
 		free(zb);
 
+
+		// i will loop through different rotations later, nyi
+		// but something like counterclockwise x rotation ->
+		// counterclockwise x+y rotation -> y_rotation -> etc
+		// not too hard to implement as long as you make sure
+		// to switch after full rotations. perhaps that's not
+		// even necessary. maybe just make it rotate sin(x) in the x
+		// and cos(x) in the y, thereby making it rotate different amounts
+		// in each axis?
 		x_rotation(&cp, rad);
 		y_rotation(&cp, rad); // fix this before uncommenting
 		frames_drawn += 1;

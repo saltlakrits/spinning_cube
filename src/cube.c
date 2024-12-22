@@ -197,7 +197,7 @@ static ProjectedPoint to_2d(Point p) {
   // projection plane is at some distance from viewer.
   // this is constant for the calculation,
   // but arbitrarily chosen as far as i can tell.
-  const double proj_d = 25.0;
+  const double proj_d = 29.0;
 
   // throw the point way back
   double pushed_z = p.z - 50;

@@ -7,6 +7,7 @@
 
 // how much wider to draw the screen
 #define GRAPHICAL_X_MULTIPLIER 2
+#define LIGHT_MODE 1
 
 // make some constant radians value to rotate by,
 // 2.0 * M_PI / 600.0 -> a full rotation takes 10 sec
@@ -27,6 +28,10 @@ void rotate_c(CubePoints *cp, double *rotation_rad) {
   y_rotation(cp, sin(*rotation_rad) * ROTATION_RADIANS);
 }
 
+void qcol(int num, double r, double b, double g) {
+	init_color(num, nc_col(r), nc_col(b), nc_col(g));
+}
+
 int main() {
 
   // ncurses init, not everything is strictly needed
@@ -39,13 +44,40 @@ int main() {
   // if color this is needed
   start_color();
 
+	#ifndef LIGHT_MODE
+	#define LIGHT_MODE 0
+	#endif
+
+	#if LIGHT_MODE == 1
   // Bright
-  init_color(1, nc_col(0), nc_col(256), nc_col(128));
+	qcol(1, 0, 256, 128);
+  // init_color(1, nc_col(0), nc_col(256), nc_col(128));
   // Darkened
-  init_color(2, nc_col(0), nc_col(256.0 * 0.9), nc_col(128 * 0.9));
+	qcol(2, 0, 256 * 0.66, 128 * 0.66);
+  // init_color(2, nc_col(0), nc_col(256.0 * 0.66), nc_col(128 * 0.66));
+  // Very dark
+	qcol(3, 0, 256 * 0.33, 128 * 0.33);
+  // init_color(3, nc_col(0), nc_col(256.0 * 0.33), nc_col(128 * 0.33));
 
   init_pair(1, 1, COLOR_BLACK);
   init_pair(2, 2, COLOR_BLACK);
+  init_pair(3, 3, COLOR_BLACK);
+
+	#else
+	// Bright
+	qcol(1, 0, 200, 256);
+	// Darkened
+	qcol(2, 0, 179, 232);
+	// Very Dark
+	qcol(3, 0, 161, 209);
+
+	init_pair(1, 1, COLOR_WHITE);
+  init_pair(2, 2, COLOR_WHITE);
+  init_pair(3, 3, COLOR_WHITE);
+
+	init_pair(4, COLOR_WHITE, COLOR_WHITE);
+	bkgd(COLOR_PAIR(4));
+	#endif
 
   refresh();
 
@@ -57,7 +89,7 @@ int main() {
 
   // make a cube
   int cube_side_len = MIN(lines, cols);
-  CubePoints cp = new_cube(cube_side_len);
+  CubePoints cp = new_cube(cube_side_len * 1.5);
 
   // two choices, either we change rotation after a full rotation,
   // or we vary the amount of rotation depending on a function.
@@ -77,50 +109,34 @@ int main() {
     // get a zbuffer -- remember to free this
     // proj_d = distance from viewer to projection plane
     // cube_d = distance to move the cube before projecting
-    // make_zbuffer(CubePoints *cp, double proj_d, double cube_d,
-    //   int lines, int cols)
-    ProjectedPoint(*zb)[lines][cols] = make_zbuffer(&cp, 20.0, 55.0, lines, cols);
-
-    // this is dumb, must generalize
-    double max_distance = -INFINITY;
-    for (int y = 0; y < lines; y++) {
-      for (int x = 0; x < cols; x++) {
-        // draw each cell
-        if ((*zb)[y][x].distance != INFINITY) {
-          double dist = (*zb)[y][x].distance;
-          if (dist > max_distance) {
-            // find furthest object that actually exists
-            max_distance = dist;
-          }
-        }
-      }
-    }
-
-    // point_distance / max_distance will always be 0 < d < 1
-    // so we can draw different chars at different fractions of 1
+		double cube_d = cube_side_len * 3;
+		double proj_d = cube_side_len;
+    ProjectedPoint(*zb)[lines][cols] = make_zbuffer(&cp, proj_d, cube_d, lines, cols);
 
     for (int y = 0; y < lines; y++) {
       for (int x = 0; x < cols; x++) {
         // draw each cell
         if ((*zb)[y][x].distance != INFINITY) {
-          double dist_float = (*zb)[y][x].distance / max_distance;
+					// something to judge distance by
+					// "real distance"/distance from camera to cube center
+          double dist_float = (*zb)[y][x].distance / cube_d;
 
           // UGLY
-          if (dist_float < 0.5) {
+          if (dist_float < 0.7) {
             attron(A_BOLD);
             attron(COLOR_PAIR(1));
             mvprintw(y, x * GRAPHICAL_X_MULTIPLIER, "00");
             attroff(COLOR_PAIR(1));
             attroff(A_BOLD);
-          } else if (dist_float < 0.6) {
+          } else if (dist_float < 0.75) {
             attron(COLOR_PAIR(1));
             mvprintw(y, x * GRAPHICAL_X_MULTIPLIER, "00");
             attroff(COLOR_PAIR(1));
-          } else if (dist_float < 0.7) {
+          } else if (dist_float < 0.8) {
             attron(COLOR_PAIR(1));
             mvprintw(y, x * GRAPHICAL_X_MULTIPLIER, "OO");
             attroff(COLOR_PAIR(1));
-          } else if (dist_float < 0.8) {
+          } else if (dist_float < 0.85) {
             attron(COLOR_PAIR(1));
             mvprintw(y, x * GRAPHICAL_X_MULTIPLIER, "oo");
             attroff(COLOR_PAIR(1));
@@ -128,24 +144,20 @@ int main() {
             attron(COLOR_PAIR(2));
             mvprintw(y, x * GRAPHICAL_X_MULTIPLIER, "oo");
             attroff(COLOR_PAIR(2));
-          } else if (dist_float < 1.0) {
+					} else if (dist_float < 1.0) {
             attron(COLOR_PAIR(2));
             mvprintw(y, x * GRAPHICAL_X_MULTIPLIER, "..");
             attroff(COLOR_PAIR(2));
-          }
+          } else if (dist_float >= 1.0) {
+            attron(COLOR_PAIR(3));
+            mvprintw(y, x * GRAPHICAL_X_MULTIPLIER, "..");
+            attroff(COLOR_PAIR(3));
+					}
         }
       }
     }
-    free(zb);
 
-    // i will loop through different rotations later, nyi
-    // but something like counterclockwise x rotation ->
-    // counterclockwise x+y rotation -> y_rotation -> etc
-    // not too hard to implement as long as you make sure
-    // to switch after full rotations. perhaps that's not
-    // even necessary. maybe just make it rotate sin(x) in the x
-    // and cos(x) in the y, thereby making it rotate different amounts
-    // in each axis?
+    free(zb);
 
     // x_rotation(&cp, ROTATION_RADIANS);
     // y_rotation(&cp, ROTATION_RADIANS);

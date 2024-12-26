@@ -1,7 +1,8 @@
-#include <bits/time.h>
 #include <math.h>
 #include <ncurses.h>
+#include <pthread.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -17,7 +18,7 @@
 #define FRAMERATE 60.0
 #define LIGHT_MODE 1
 
-// #define DEBUG
+#define DEBUG
 
 // make some constant radians value to rotate by,
 // 2.0 * M_PI / 600.0 -> a full rotation takes 10 sec
@@ -74,7 +75,7 @@ int main() {
   // Bright
   qcol(1, 0, 200, 255);
   // Darkened
-	qcol(2, 100, 200, 255);
+  qcol(2, 100, 200, 255);
   // Very Dark
   qcol(3, 200, 220, 255);
 
@@ -118,7 +119,11 @@ int main() {
   struct timespec draw_start, draw_end;
   double draw_time, sleep_time;
 
+  pthread_t draw_thread_id;
 
+  // get a zbuffer -- passed to and freed in draw function
+  ProjectedPoint(*zb)[lines][cols] =
+      make_zbuffer(&cp, proj_d, cube_d, lines, cols);
 
   while (1) {
     // main loop
@@ -130,19 +135,20 @@ int main() {
 #endif
     erase();
 
-		// TODO: Make a zbuffer before while loop, make
-		// a thread in while loop and pass it in, main thread
-		// makes another zbuffer, join, restart while loop
+    void *zb_cpy = malloc(sizeof *zb);
+    zb_cpy = memcpy(zb_cpy, zb, sizeof *zb);
+    free(zb);
 
-    // get a zbuffer -- passed to and freed in draw function
-    ProjectedPoint(*zb)[lines][cols] =
-        make_zbuffer(&cp, proj_d, cube_d, lines, cols);
+    ArgStruct thread_arg = {.zbuffer = zb_cpy,
+                            .lines = lines,
+                            .cols = cols,
+                            .cube_dist = cube_d,
+                            .x_mult = GRAPHICAL_X_MULTIPLIER};
 
-		draw(zb, lines, cols, cube_d, GRAPHICAL_X_MULTIPLIER);
+    pthread_create(&draw_thread_id, NULL, draw_thread, &thread_arg);
 
-    // x_rotation(&cp, ROTATION_RADIANS);
-    // y_rotation(&cp, ROTATION_RADIANS);
     rotate_c(&cp, &rotation_rad);
+    zb = make_zbuffer(&cp, proj_d, cube_d, lines, cols);
 
     // enable quitting
     int ch;
@@ -165,6 +171,10 @@ int main() {
     // next frame -- we can't keep up with the target framerate
     sleep_time = (sleep_time >= 0) ? sleep_time : 0;
 
+    pthread_join(draw_thread_id, NULL);
+#ifdef DEBUG
+    mvprintw(0, 0, "%ld", frames_drawn);
+#endif
     // NOTE: usleep sleeps for usec (microseconds, millions of a second)
     usleep(sleep_time * 1e3);
   }

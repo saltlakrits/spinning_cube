@@ -8,11 +8,15 @@
 #include "cube.h"
 
 // how much wider to draw the screen
+// than it is tall
 #define GRAPHICAL_X_MULTIPLIER 2
+// target framerate, will not exceed this
+// but can drop below (and the whole animation
+// will slow down).
 #define FRAMERATE 60.0
-#define LIGHT_MODE 0
+#define LIGHT_MODE 1
 
-#define DEBUG
+// #define DEBUG
 
 // make some constant radians value to rotate by,
 // 2.0 * M_PI / 600.0 -> a full rotation takes 10 sec
@@ -22,7 +26,7 @@
 
 // just for convenience, converting "normal" colors
 // to colors usable in ncurses
-int nc_col(double v) { return (int)(v / 256 * 1000); }
+int nc_col(double v) { return (int)(v / 255 * 1000); }
 
 // rotation that varies
 void rotate_c(CubePoints *cp, double *rotation_rad) {
@@ -35,15 +39,6 @@ void rotate_c(CubePoints *cp, double *rotation_rad) {
 
 void qcol(int num, double r, double g, double b) {
   init_color(num, nc_col(r), nc_col(g), nc_col(b));
-}
-
-void dist_color(double dist, double r, double g, double b) {
-  // should redefine color 1 based on dist; in practice this
-  // should make things that are closer (dist < 1) brighter,
-  // and things that are further away (dist >= 1) darker
-
-  qcol(1, r / (2 * dist), g / (2 * dist), b / (2 * dist));
-  // qcol(1, r / dist, g / dist, b / dist);
 }
 
 int main() {
@@ -63,23 +58,29 @@ int main() {
 #endif
 
 #if LIGHT_MODE == 0
-  // colors
-  const double r = 0;
-  const double g = 1000;
-  const double b = 500;
+  // Bright
+  qcol(1, 0, 255, 128);
+  // Darkened
+  qcol(2, 0, 255 * 0.66, 128 * 0.66);
+  // Very dark
+  qcol(3, 0, 255 * 0.33, 128 * 0.33);
 
-  init_color(1, r, g, b);
   init_pair(1, 1, COLOR_BLACK);
+  init_pair(2, 2, COLOR_BLACK);
+  init_pair(3, 3, COLOR_BLACK);
 
 #else
-  const double r = 0;
-  const double g = 200 / 256 * 1000;
-  const double b = 1000;
+  // Bright
+  qcol(1, 0, 200, 255);
+  // Darkened
+	qcol(2, 100, 200, 255);
+  // Very Dark
+  qcol(3, 200, 220, 255);
 
-  init_color(1, r, g, b);
   init_pair(1, 1, COLOR_WHITE);
+  init_pair(2, 2, COLOR_WHITE);
+  init_pair(3, 3, COLOR_WHITE);
 
-  // white background
   init_pair(4, COLOR_WHITE, COLOR_WHITE);
   bkgd(COLOR_PAIR(4));
 #endif
@@ -112,7 +113,7 @@ int main() {
   long frames_drawn = 0;
 #endif
 
-	// for calculating an even framerate
+  // for calculating an even framerate
   struct timespec draw_start, draw_end;
   double draw_time, sleep_time;
 
@@ -142,25 +143,24 @@ int main() {
         if ((*zb)[y][x].distance != INFINITY) {
           // something to judge distance by
           // "real distance"/distance from camera to cube center
-          // 0~2 ish
           double dist_float = (*zb)[y][x].distance / cube_d;
 
 					// UGLY
-          if (dist_float < 0.5) {
+          if (dist_float < 0.7) {
             attron(A_BOLD);
             attron(COLOR_PAIR(1));
             mvprintw(y, x * GRAPHICAL_X_MULTIPLIER, "00");
             attroff(COLOR_PAIR(1));
             attroff(A_BOLD);
-          } else if (dist_float < 0.6) {
+          } else if (dist_float < 0.75) {
             attron(COLOR_PAIR(1));
             mvprintw(y, x * GRAPHICAL_X_MULTIPLIER, "00");
             attroff(COLOR_PAIR(1));
-          } else if (dist_float < 0.7) {
+          } else if (dist_float < 0.8) {
             attron(COLOR_PAIR(1));
             mvprintw(y, x * GRAPHICAL_X_MULTIPLIER, "OO");
             attroff(COLOR_PAIR(1));
-          } else if (dist_float < 0.8) {
+          } else if (dist_float < 0.85) {
             attron(COLOR_PAIR(1));
             mvprintw(y, x * GRAPHICAL_X_MULTIPLIER, "oo");
             attroff(COLOR_PAIR(1));
@@ -168,11 +168,15 @@ int main() {
             attron(COLOR_PAIR(2));
             mvprintw(y, x * GRAPHICAL_X_MULTIPLIER, "oo");
             attroff(COLOR_PAIR(2));
-          } else if (dist_float < 1.0) {
+					} else if (dist_float < 1.0) {
             attron(COLOR_PAIR(2));
-            mvprintw(y, x * GRAPHICAL_X_MULTIPLIER, "..");
+            mvprintw(y, x * GRAPHICAL_X_MULTIPLIER, "oo");
             attroff(COLOR_PAIR(2));
-          }
+          } else if (dist_float >= 1.0) {
+            attron(COLOR_PAIR(3));
+            mvprintw(y, x * GRAPHICAL_X_MULTIPLIER, "oo");
+            attroff(COLOR_PAIR(3));
+					}
         }
       }
     }
@@ -200,8 +204,8 @@ int main() {
     // = 16.666... ms between each frame
 
     sleep_time = (1 / FRAMERATE) * 1.0e3 - draw_time;
-		// if negative sleep_time, we just don't sleep at all and start drawing
-		// next frame -- we can't keep up with the target framerate
+    // if negative sleep_time, we just don't sleep at all and start drawing
+    // next frame -- we can't keep up with the target framerate
     sleep_time = (sleep_time >= 0) ? sleep_time : 0;
 
     // NOTE: usleep sleeps for usec (microseconds, millions of a second)
@@ -214,7 +218,6 @@ int main() {
 
 #ifdef DEBUG
   clock_gettime(CLOCK_MONOTONIC, &end);
-  // nsec_diff is the elapsed time in nanoseconds
   double elapsed = (end.tv_sec - start.tv_sec);
   elapsed += (end.tv_nsec - start.tv_nsec) / 1.0e9;
 

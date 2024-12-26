@@ -28,10 +28,10 @@ CubePoints new_cube(double side_len) {
 
   const double half_side = side_len / 2;
 
-  // note that the names of the points here will be meaningless
-  // once you start rotating them, they are only for making
-  // sense out of "building" the cube
-
+  /* NOTE: that the names of the points here will be meaningless
+   * once you start rotating them, they are only for making
+   * sense out of "building" the cube
+	 */
   // west is x-, east is x+
   // bottom is y-, top is y+
   // south is z+, north is z-

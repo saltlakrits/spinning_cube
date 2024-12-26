@@ -8,9 +8,10 @@ typedef struct {
   double z;
 } Point;
 
-// here is a "cube" of points that you will actually rotate
-// during the process of drawing, a complete cube is
-// rendered from the corners
+/* NOTE: here is a "cube" of points that you will actually rotate
+ * during the process of drawing, a complete cube is
+ * rendered from the corners
+ */
 typedef struct {
   int side;
   Point corners[CUBE_CORNERS];

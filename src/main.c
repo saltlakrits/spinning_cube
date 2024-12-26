@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include "cube.h"
+#include "draw.h"
 
 // how much wider to draw the screen
 // than it is tall
@@ -117,6 +118,8 @@ int main() {
   struct timespec draw_start, draw_end;
   double draw_time, sleep_time;
 
+
+
   while (1) {
     // main loop
 
@@ -127,61 +130,15 @@ int main() {
 #endif
     erase();
 
-    // mvprintw(0, 0, "Frames: %d", frames_drawn);
-    // mvprintw(0, cols - 1 - 3, "%d", cols);  // 213
-    // mvprintw(1, cols - 1 - 2, "%d", LINES); // 45
+		// TODO: Make a zbuffer before while loop, make
+		// a thread in while loop and pass it in, main thread
+		// makes another zbuffer, join, restart while loop
 
-    // get a zbuffer -- remember to free this
+    // get a zbuffer -- passed to and freed in draw function
     ProjectedPoint(*zb)[lines][cols] =
         make_zbuffer(&cp, proj_d, cube_d, lines, cols);
 
-    for (int y = 0; y < lines; y++) {
-      for (int x = 0; x < cols; x++) {
-        // draw each cell
-        // if the distance to a point is INFINITY, it means we didn't project a
-        // coord to that cell
-        if ((*zb)[y][x].distance != INFINITY) {
-          // something to judge distance by
-          // "real distance"/distance from camera to cube center
-          double dist_float = (*zb)[y][x].distance / cube_d;
-
-					// UGLY
-          if (dist_float < 0.7) {
-            attron(A_BOLD);
-            attron(COLOR_PAIR(1));
-            mvprintw(y, x * GRAPHICAL_X_MULTIPLIER, "00");
-            attroff(COLOR_PAIR(1));
-            attroff(A_BOLD);
-          } else if (dist_float < 0.75) {
-            attron(COLOR_PAIR(1));
-            mvprintw(y, x * GRAPHICAL_X_MULTIPLIER, "00");
-            attroff(COLOR_PAIR(1));
-          } else if (dist_float < 0.8) {
-            attron(COLOR_PAIR(1));
-            mvprintw(y, x * GRAPHICAL_X_MULTIPLIER, "OO");
-            attroff(COLOR_PAIR(1));
-          } else if (dist_float < 0.85) {
-            attron(COLOR_PAIR(1));
-            mvprintw(y, x * GRAPHICAL_X_MULTIPLIER, "oo");
-            attroff(COLOR_PAIR(1));
-          } else if (dist_float < 0.9) {
-            attron(COLOR_PAIR(2));
-            mvprintw(y, x * GRAPHICAL_X_MULTIPLIER, "oo");
-            attroff(COLOR_PAIR(2));
-					} else if (dist_float < 1.0) {
-            attron(COLOR_PAIR(2));
-            mvprintw(y, x * GRAPHICAL_X_MULTIPLIER, "oo");
-            attroff(COLOR_PAIR(2));
-          } else if (dist_float >= 1.0) {
-            attron(COLOR_PAIR(3));
-            mvprintw(y, x * GRAPHICAL_X_MULTIPLIER, "oo");
-            attroff(COLOR_PAIR(3));
-					}
-        }
-      }
-    }
-
-    free(zb);
+		draw(zb, lines, cols, cube_d, GRAPHICAL_X_MULTIPLIER);
 
     // x_rotation(&cp, ROTATION_RADIANS);
     // y_rotation(&cp, ROTATION_RADIANS);

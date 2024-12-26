@@ -216,6 +216,7 @@ void *make_zbuffer(CubePoints *cp, double proj_d, double cube_d, int rows,
 	// this MUST be supported in C23, so while we're not there yet,
 	// might as well make use of it.
 	// (but the syntax for it is atrocious. oh well!)
+	// TODO: zbuffer doesn't need to contain ProjectedPoints, just depths
   ProjectedPoint(*zbuffer)[rows][cols] = (malloc(sizeof *zbuffer));
 
   // initialize for comparison

@@ -154,6 +154,7 @@ int main() {
 
     notcurses_render(nc);
 
+    pthread_join(draw_thread_id, NULL);
     clock_gettime(CLOCK_MONOTONIC, &draw_end);
     // calculate draw_time: time in ms since last draw
     draw_time = (draw_end.tv_sec - draw_start.tv_sec) * 1.0e3 +
@@ -167,7 +168,6 @@ int main() {
     // next frame -- we can't keep up with the target framerate
     sleep_time = (sleep_time >= 0) ? sleep_time : 0;
 
-    pthread_join(draw_thread_id, NULL);
     // NOTE: usleep sleeps for usec (microseconds, millions of a second)
     usleep(sleep_time * 1e3);
   }

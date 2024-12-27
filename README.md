@@ -1,4 +1,4 @@
-# Rotating Cube in terminal
+# Rotating Cube in terminal (notcurses branch)
 
 Seen this online a bunch of times, so wanted to learn how to make it myself.
 Will adapt to terminal size, so make the font unreadably small to make it look a little better!
@@ -8,3 +8,7 @@ Implemented threading for drawing a zbuffer while making a new one, didn't incre
 Chalking this up to limitations of the terminal, but perhaps my program is just really slow!
 
 Learned a lot!
+
+## notcurses branch
+
+Simply a swap to notcurses instead of ncurses, just to learn. not using any interesting functionality that isn't in ncurses

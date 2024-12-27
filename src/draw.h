@@ -2,10 +2,9 @@
 
 #include <notcurses/notcurses.h>
 
-#define BRIGHT 0x00c8ff
-#define MEDIUM 0x61ddff
-#define DARK 0xc8e1ff
-#define BG 0xFFFFFF
+extern int bright;
+extern int medium;
+extern int dark;
 
 typedef struct {
 	void *zbuffer;

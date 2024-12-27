@@ -29,5 +29,5 @@ CubePoints new_cube(double side_len);
 void x_rotation(CubePoints *cp, double theta);
 void y_rotation(CubePoints *cp, double theta);
 
-void *make_zbuffer(CubePoints *cp, double proj_d, double cube_d, int rows,
+void *make_zbuf(CubePoints *cp, double proj_d, double cube_d, int rows,
                    int cols);

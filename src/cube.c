@@ -202,11 +202,7 @@ static ProjectedPoint to_2d(Point p, double proj_d, double cube_d) {
   return new_point;
 }
 
-// not a real zbuffer, just how i imagine it, if the
-// performance is wildly bad i can look up how to
-// do this properly
-// TODO: zbuffer doesn't need to contain ProjectedPoints, just depths
-void *make_zbuffer(CubePoints *cp, double proj_d, double cube_d, int rows,
+void *make_zbuf(CubePoints *cp, double proj_d, double cube_d, int rows,
                    int cols) {
 
   // render cube, cast the void ptr
@@ -259,5 +255,5 @@ void *make_zbuffer(CubePoints *cp, double proj_d, double cube_d, int rows,
 }
 // macro to ensure that when we call this function, the result is
 // casted appropriately
-#define make_zbuffer(C, ROWS, COLS)                                            \
-  ((ProjectedPoint(*)[ROWS][COLS])make_zbuffer(C, ROWS, COLS))
+#define make_zbuf(C, ROWS, COLS)                                            \
+  ((double(*)[ROWS][COLS])make_zbuf(C, ROWS, COLS))

@@ -17,9 +17,11 @@
 // target framerate, will not exceed this
 // but can drop below (and the whole animation
 // will slow down).
-#define FRAMERATE 144.0
-#define LIGHT_MODE 1
+#define FRAMERATE 60.0
+#define LIGHT_MODE 0
 
+// if DEBUG is defined, collect and print out
+// data about average FPS and such
 #define DEBUG
 
 // make some constant radians value to rotate by,
@@ -27,10 +29,6 @@
 #define ROTATION_RADIANS (2.0 * M_PI / (FRAMERATE * 20))
 
 #define MIN(A, B) ((A < B) ? A : B)
-
-// just for convenience, converting "normal" colors
-// to colors usable in ncurses
-int nc_col(double v) { return (int)(v / 255 * 1000); }
 
 // rotation that varies
 void rotate_c(CubePoints *cp, double *rotation_rad) {
@@ -48,72 +46,60 @@ int main() {
 #endif
 
 #if LIGHT_MODE == 0
-  // Bright
-  qcol(1, 0, 255, 128);
-  // Darkened
-  qcol(2, 0, 255 * 0.66, 128 * 0.66);
-  // Very dark
-  qcol(3, 0, 255 * 0.33, 128 * 0.33);
+	// green (for dark mode) colors:
+  // bright = 0x00ff80;
+  // medium = 0x00a854;
+  // dark = 0x00542a;
 
-  init_pair(1, 1, COLOR_BLACK);
-  init_pair(2, 2, COLOR_BLACK);
-  init_pair(3, 3, COLOR_BLACK);
+	// blue (for dark mode) colors:
+  bright = 0x00c8ff;
+  medium = 0x00a6d4;
+  dark = 0x006480;
+
+  int bg = NCCHANNEL_INITIALIZER(0, 0, 0);
+  int fg = NCCHANNEL_INITIALIZER(255, 255, 255);
 
 #else
-  // Bright
-  // qcol(1, 0, 200, 255);
-  // Darkened
-  // qcol(2, 100, 200, 255);
-  // Very Dark
-  // qcol(3, 200, 220, 255);
+  bright = 0x00c8ff;
+  medium = 0x61ddff;
+  dark = 0xc8e1ff;
 
-  // I want to override whatever the terminal
-  // thinks is white to actually be white
-  // qcol(4, 255, 255, 255);
+  int bg = NCCHANNEL_INITIALIZER(255, 255, 255);
+  int fg = NCCHANNEL_INITIALIZER(0, 0, 0);
 
-  // init_pair(1, 1, 4);
-  // init_pair(2, 2, 4);
-  // init_pair(3, 3, 4);
-
-  // init_pair(4, 4, 4);
-  // bkgd(COLOR_PAIR(4));
 #endif
 
   struct notcurses *nc = notcurses_init(NULL, NULL);
   struct ncplane *ncp = notcurses_stdplane(nc);
   struct ncinput *nci;
 
-	// this took me a bit to figure out, still
-	// not sure i have it right
-	// use macro to make channels -> combine them into
-	// a channel pair
-	// now you can edit the channelS object with a bunch
-	// of methods
-	int bg = NCCHANNEL_INITIALIZER(255, 255, 255);
-	int fg = NCCHANNEL_INITIALIZER(0, 0, 0);
-	int channels = ncchannels_combine(fg, bg);
-	ncplane_set_base(ncp, " ", 0, channels);
-	ncplane_erase(ncp);
+  // combine fg, bg to make channels value, set it as base
+  // for the plane (basically just set a background color)
+  int channels = ncchannels_combine(fg, bg);
+  ncplane_set_base(ncp, " ", 0, channels);
+  ncplane_erase(ncp);
 
   unsigned int LINES, COLS;
   notcurses_stddim_yx(nc, &LINES, &COLS);
 
   // available drawing area; x is divided by 2 becaue
   // we will stretch the drawing by 2 horizontally to
-  // make the dimensions appear even
+  // make the dimensions appear even, so we make the
+  // actual drawing area half as big
   int lines = LINES;
   int cols = COLS / GRAPHICAL_X_MULTIPLIER;
 
   // make a cube
-  int cube_side_len = MIN(lines, cols);
+  double cube_side_len = MIN(lines, cols) * 1.5;
   // proj_d = distance from viewer to projection plane
   // cube_d = distance to move the cube before projecting
-  double cube_d = cube_side_len * 3;
-  double proj_d = cube_side_len;
-  CubePoints cp = new_cube(cube_side_len * 1.5);
+  double cube_d = cube_side_len * 2;
+  double proj_d = cube_side_len / 1.5;
+  CubePoints cp = new_cube(cube_side_len);
 
-  // two choices, either we change rotation after a full rotation,
-  // or we vary the amount of rotation depending on a function.
+  // we use rotation_rad as a radians value to increase
+  // each frame and in turn use to determine the rotation
+  // by y and x axis
   double rotation_rad = 0;
 
 #ifdef DEBUG
@@ -124,15 +110,16 @@ int main() {
   long frames_drawn = 0;
 #endif
 
-  // for calculating an even framerate
+  // for calculating how long a frame takes -> calc'ing the sleep time
   struct timespec draw_start, draw_end;
   double draw_time, sleep_time;
 
+  // id for drawing thread, in an attempt to increase performance.
+  // that may very well not really be the bottleneck though
   pthread_t draw_thread_id;
 
   // get a zbuffer -- passed to and freed in draw function
-  ProjectedPoint(*zb)[lines][cols] =
-      make_zbuffer(&cp, proj_d, cube_d, lines, cols);
+  double(*zb)[lines][cols] = make_zbuf(&cp, proj_d, cube_d, lines, cols);
 
   while (1) {
     // main loop
@@ -148,6 +135,7 @@ int main() {
     // void *fun(void *arg) {
     // 		return NULL;
     // }
+    // we copy the zbuffer so we can pass it along and start making a new one
     void *zb_cpy = malloc(sizeof *zb);
     zb_cpy = memcpy(zb_cpy, zb, sizeof *zb);
     free(zb);
@@ -162,7 +150,7 @@ int main() {
     pthread_create(&draw_thread_id, NULL, draw_thread, &thread_arg);
 
     rotate_c(&cp, &rotation_rad);
-    zb = make_zbuffer(&cp, proj_d, cube_d, lines, cols);
+    zb = make_zbuf(&cp, proj_d, cube_d, lines, cols);
 
     // enable quitting
     int ch;
@@ -171,7 +159,7 @@ int main() {
       break;
     }
 
-		notcurses_render(nc);
+    notcurses_render(nc);
 
     clock_gettime(CLOCK_MONOTONIC, &draw_end);
     // calculate draw_time: time in ms since last draw
@@ -191,8 +179,8 @@ int main() {
     usleep(sleep_time * 1e3);
   }
 
-  // ncurses quit, restore term
-	notcurses_stop(nc);
+  // notcurses quit, restore term
+  notcurses_stop(nc);
 
 #ifdef DEBUG
   clock_gettime(CLOCK_MONOTONIC, &end);

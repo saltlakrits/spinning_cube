@@ -2,10 +2,15 @@
 
 #include <notcurses/notcurses.h>
 
+// for setting colors in main and using
+// in draw.c
 extern int bright;
 extern int medium;
 extern int dark;
 
+// struct to pass to draw thread,
+// thread functions can only take one
+// argument and it has to be a void ptr
 typedef struct {
 	void *zbuffer;
 	int lines;

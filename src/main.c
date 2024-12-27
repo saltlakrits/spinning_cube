@@ -30,6 +30,8 @@
 
 #define MIN(A, B) ((A < B) ? A : B)
 
+// TODO: illumination? zzz
+
 // rotation that varies
 void rotate_c(CubePoints *cp, double *rotation_rad) {
   *rotation_rad += (2.0 * M_PI) / (FRAMERATE * 100);

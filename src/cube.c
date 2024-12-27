@@ -215,7 +215,7 @@ void *make_zbuf(CubePoints *cp, double proj_d, double cube_d, int rows,
   // (but the syntax for it is atrocious. oh well!)
   double(*zbuffer)[rows][cols] = malloc(sizeof *zbuffer);
 
-  // initialize for comparison
+  // initialize zbuffer with inf values
   for (int y = 0; y < rows; y++) {
     for (int x = 0; x < cols; x++) {
       (*zbuffer)[y][x] = INFINITY;

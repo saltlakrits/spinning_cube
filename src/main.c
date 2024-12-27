@@ -1,3 +1,5 @@
+// you can tell this is well-written by the way
+// it uses a million libraries for something so simple
 #include <math.h>
 #include <ncurses.h>
 #include <pthread.h>
@@ -16,7 +18,7 @@
 // but can drop below (and the whole animation
 // will slow down).
 #define FRAMERATE 60.0
-#define LIGHT_MODE 1
+#define LIGHT_MODE 0
 
 #define DEBUG
 
@@ -135,6 +137,10 @@ int main() {
 #endif
     erase();
 
+		// NOTE: to spawn a thread the function must be of signature
+		// void *fun(void *arg) {
+		// 		return NULL;
+		// }
     void *zb_cpy = malloc(sizeof *zb);
     zb_cpy = memcpy(zb_cpy, zb, sizeof *zb);
     free(zb);

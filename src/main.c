@@ -18,7 +18,7 @@
 // but can drop below (and the whole animation
 // will slow down).
 #define FRAMERATE 60.0
-#define LIGHT_MODE 0
+#define LIGHT_MODE 1
 
 // if DEBUG is defined, collect and print out
 // data about average FPS and such
@@ -32,15 +32,6 @@
 
 // TODO: illumination? zzz
 
-// rotation that varies
-void rotate_c(CubePoints *cp, double *rotation_rad) {
-  *rotation_rad += (2.0 * M_PI) / (FRAMERATE * 100);
-  *rotation_rad = fmod(*rotation_rad, (2.0 * M_PI));
-
-  x_rotation(cp, cos(*rotation_rad) * ROTATION_RADIANS);
-  y_rotation(cp, sin(*rotation_rad) * ROTATION_RADIANS);
-}
-
 int main() {
 
 #ifndef LIGHT_MODE
@@ -48,12 +39,12 @@ int main() {
 #endif
 
 #if LIGHT_MODE == 0
-	// green (for dark mode) colors:
+  // green (for dark mode) colors:
   // bright = 0x00ff80;
   // medium = 0x00a854;
   // dark = 0x00542a;
 
-	// blue (for dark mode) colors:
+  // blue (for dark mode) colors:
   bright = 0x00c8ff;
   medium = 0x00a6d4;
   dark = 0x006480;
@@ -97,7 +88,7 @@ int main() {
   // cube_d = distance to move the cube before projecting
   double cube_d = cube_side_len * 2;
   double proj_d = cube_side_len / 1.5;
-  CubePoints cp = new_cube(cube_side_len);
+  struct CubePoints cp = new_cube(cube_side_len);
 
   // we use rotation_rad as a radians value to increase
   // each frame and in turn use to determine the rotation
@@ -142,16 +133,16 @@ int main() {
     zb_cpy = memcpy(zb_cpy, zb, sizeof *zb);
     free(zb);
 
-    ArgStruct thread_arg = {.zbuffer = zb_cpy,
-                            .lines = lines,
-                            .cols = cols,
-                            .cube_dist = cube_d,
-                            .x_mult = GRAPHICAL_X_MULTIPLIER,
-                            .ncp = ncp};
+    struct DrawArgs thread_arg = {.zbuffer = zb_cpy,
+                                  .lines = lines,
+                                  .cols = cols,
+                                  .cube_dist = cube_d,
+                                  .x_mult = GRAPHICAL_X_MULTIPLIER,
+                                  .ncp = ncp};
 
     pthread_create(&draw_thread_id, NULL, draw_thread, &thread_arg);
 
-    rotate_c(&cp, &rotation_rad);
+    rotate_c(&cp, &rotation_rad, FRAMERATE, ROTATION_RADIANS);
     zb = make_zbuf(&cp, proj_d, cube_d, lines, cols);
 
     // enable quitting

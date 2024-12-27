@@ -12,3 +12,10 @@ Learned a lot!
 ## notcurses
 
 Swapped to notcurses instead of ncurses, just to learn. not using any interesting functionality that isn't in ncurses
+
+## long, too many features, overly verbose
+
+as it is just a toy project where i implemented more and more features mostly to learn, it is a bit of a mess
+the functions for building the cube are especially verbose, perhaps because i have little knowledge of math in 3d (i learned as i went to make this)
+
+i might try to rewrite this tersely but i have already spent an inordinate amount of time on this

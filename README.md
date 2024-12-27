@@ -9,6 +9,6 @@ Chalking this up to limitations of the terminal, but perhaps my program is just 
 
 Learned a lot!
 
-## notcurses branch
+## notcurses
 
-Simply a swap to notcurses instead of ncurses, just to learn. not using any interesting functionality that isn't in ncurses
+Swapped to notcurses instead of ncurses, just to learn. not using any interesting functionality that isn't in ncurses

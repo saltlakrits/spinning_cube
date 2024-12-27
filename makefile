@@ -1,12 +1,12 @@
 CC=clang
 OUT = cube
-CFLAGS=-Isrc/
+CFLAGS=-Isrc/ -g
 SRCDIR = src/
 #OBJDIR = .obj/
 CFILES = $(wildcard $(SRCDIR)*.c)
 OBJS = $(CFILES:.c=.o)
 
-LDLIBS = -lncursesw -lm -lpthread
+LDLIBS = -lnotcurses -lnotcurses-core -lm -lpthread
 #@mkdir -p .obj
 
 

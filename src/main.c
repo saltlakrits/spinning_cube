@@ -1,7 +1,7 @@
 // you can tell this is well-written by the way
 // it uses a million libraries for something so simple
 #include <math.h>
-#include <ncurses.h>
+#include <notcurses/notcurses.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,7 +17,7 @@
 // target framerate, will not exceed this
 // but can drop below (and the whole animation
 // will slow down).
-#define FRAMERATE 60.0
+#define FRAMERATE 144.0
 #define LIGHT_MODE 1
 
 #define DEBUG
@@ -41,21 +41,7 @@ void rotate_c(CubePoints *cp, double *rotation_rad) {
   y_rotation(cp, sin(*rotation_rad) * ROTATION_RADIANS);
 }
 
-void qcol(int num, double r, double g, double b) {
-  init_color(num, nc_col(r), nc_col(g), nc_col(b));
-}
-
 int main() {
-
-  // ncurses init, not everything is strictly needed
-  initscr();
-  cbreak();
-  noecho();
-  keypad(stdscr, TRUE);
-  curs_set(0);
-  nodelay(stdscr, TRUE);
-  // if color this is needed
-  start_color();
 
 #ifndef LIGHT_MODE
 #define LIGHT_MODE 0
@@ -75,25 +61,42 @@ int main() {
 
 #else
   // Bright
-  qcol(1, 0, 200, 255);
+  // qcol(1, 0, 200, 255);
   // Darkened
-  qcol(2, 100, 200, 255);
+  // qcol(2, 100, 200, 255);
   // Very Dark
-  qcol(3, 200, 220, 255);
+  // qcol(3, 200, 220, 255);
 
-	// I want to override whatever the terminal
-	// thinks is white to actually be white
-	qcol(4, 255, 255, 255);
+  // I want to override whatever the terminal
+  // thinks is white to actually be white
+  // qcol(4, 255, 255, 255);
 
-  init_pair(1, 1, 4);
-  init_pair(2, 2, 4);
-  init_pair(3, 3, 4);
+  // init_pair(1, 1, 4);
+  // init_pair(2, 2, 4);
+  // init_pair(3, 3, 4);
 
-  init_pair(4, 4, 4);
-  bkgd(COLOR_PAIR(4));
+  // init_pair(4, 4, 4);
+  // bkgd(COLOR_PAIR(4));
 #endif
 
-  refresh();
+  struct notcurses *nc = notcurses_init(NULL, NULL);
+  struct ncplane *ncp = notcurses_stdplane(nc);
+  struct ncinput *nci;
+
+	// this took me a bit to figure out, still
+	// not sure i have it right
+	// use macro to make channels -> combine them into
+	// a channel pair
+	// now you can edit the channelS object with a bunch
+	// of methods
+	int bg = NCCHANNEL_INITIALIZER(255, 255, 255);
+	int fg = NCCHANNEL_INITIALIZER(0, 0, 0);
+	int channels = ncchannels_combine(fg, bg);
+	ncplane_set_base(ncp, " ", 0, channels);
+	ncplane_erase(ncp);
+
+  unsigned int LINES, COLS;
+  notcurses_stddim_yx(nc, &LINES, &COLS);
 
   // available drawing area; x is divided by 2 becaue
   // we will stretch the drawing by 2 horizontally to
@@ -139,12 +142,12 @@ int main() {
 #ifdef DEBUG
     frames_drawn++;
 #endif
-    erase();
+    ncplane_erase(ncp);
 
-		// NOTE: to spawn a thread the function must be of signature
-		// void *fun(void *arg) {
-		// 		return NULL;
-		// }
+    // NOTE: to spawn a thread the function must be of signature
+    // void *fun(void *arg) {
+    // 		return NULL;
+    // }
     void *zb_cpy = malloc(sizeof *zb);
     zb_cpy = memcpy(zb_cpy, zb, sizeof *zb);
     free(zb);
@@ -153,7 +156,8 @@ int main() {
                             .lines = lines,
                             .cols = cols,
                             .cube_dist = cube_d,
-                            .x_mult = GRAPHICAL_X_MULTIPLIER};
+                            .x_mult = GRAPHICAL_X_MULTIPLIER,
+                            .ncp = ncp};
 
     pthread_create(&draw_thread_id, NULL, draw_thread, &thread_arg);
 
@@ -162,11 +166,12 @@ int main() {
 
     // enable quitting
     int ch;
-    // NOTE: getch() calls refresh()! So don't refresh manually!
-    ch = getch();
+    ch = notcurses_get_nblock(nc, nci);
     if (ch == 'q') {
       break;
     }
+
+		notcurses_render(nc);
 
     clock_gettime(CLOCK_MONOTONIC, &draw_end);
     // calculate draw_time: time in ms since last draw
@@ -182,16 +187,12 @@ int main() {
     sleep_time = (sleep_time >= 0) ? sleep_time : 0;
 
     pthread_join(draw_thread_id, NULL);
-#ifdef DEBUG
-    mvprintw(0, 0, "%ld", frames_drawn);
-#endif
     // NOTE: usleep sleeps for usec (microseconds, millions of a second)
     usleep(sleep_time * 1e3);
   }
 
   // ncurses quit, restore term
-  curs_set(1);
-  endwin();
+	notcurses_stop(nc);
 
 #ifdef DEBUG
   clock_gettime(CLOCK_MONOTONIC, &end);

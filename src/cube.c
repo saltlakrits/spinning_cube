@@ -217,16 +217,16 @@ void *make_zbuffer(CubePoints *cp, double proj_d, double cube_d, int rows,
   // this MUST be supported in C23, so while we're not there yet,
   // might as well make use of it.
   // (but the syntax for it is atrocious. oh well!)
-  ProjectedPoint(*zbuffer)[rows][cols] = (malloc(sizeof *zbuffer));
+  double(*zbuffer)[rows][cols] = malloc(sizeof *zbuffer);
 
   // initialize for comparison
   for (int y = 0; y < rows; y++) {
     for (int x = 0; x < cols; x++) {
-      ProjectedPoint init_prp = {.distance = INFINITY};
-      (*zbuffer)[y][x] = init_prp;
+      (*zbuffer)[y][x] = INFINITY;
     }
   }
 
+	int x_index, y_index;
   // ugly nested for loop, but well... it's 3 dimensions.
   // all the memory in the cube should be adjacent to each other
   // as far as i understand, so all the indirection should be fine
@@ -235,8 +235,8 @@ void *make_zbuffer(CubePoints *cp, double proj_d, double cube_d, int rows,
       for (int point = 0; point < cp->side; point++) {
         ProjectedPoint pr_p = to_2d((*c)[side][line][point], proj_d, cube_d);
 				// offset by half a screen width and height
-        int x_index = (cols / 2) + pr_p.x;
-        int y_index = (rows / 2) + pr_p.y;
+        x_index = (cols / 2) + pr_p.x;
+        y_index = (rows / 2) + pr_p.y;
 
 				// if it doesn't fit, discard
         if (x_index < 0 || x_index > cols || y_index < 0 || y_index > rows) {
@@ -245,8 +245,8 @@ void *make_zbuffer(CubePoints *cp, double proj_d, double cube_d, int rows,
 
 				// if it is closer to camera than whether is already in the buffer,
 				// replace in buffer
-        if ((*zbuffer)[y_index][x_index].distance > pr_p.distance) {
-          (*zbuffer)[y_index][x_index] = pr_p;
+        if ((*zbuffer)[y_index][x_index] > pr_p.distance) {
+          (*zbuffer)[y_index][x_index] = pr_p.distance;
         }
       }
     }

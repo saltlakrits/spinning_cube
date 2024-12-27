@@ -18,7 +18,7 @@
 // but can drop below (and the whole animation
 // will slow down).
 #define FRAMERATE 60.0
-#define LIGHT_MODE 0
+#define LIGHT_MODE 1
 
 #define DEBUG
 
@@ -81,11 +81,15 @@ int main() {
   // Very Dark
   qcol(3, 200, 220, 255);
 
-  init_pair(1, 1, COLOR_WHITE);
-  init_pair(2, 2, COLOR_WHITE);
-  init_pair(3, 3, COLOR_WHITE);
+	// I want to override whatever the terminal
+	// thinks is white to actually be white
+	qcol(4, 255, 255, 255);
 
-  init_pair(4, COLOR_WHITE, COLOR_WHITE);
+  init_pair(1, 1, 4);
+  init_pair(2, 2, 4);
+  init_pair(3, 3, 4);
+
+  init_pair(4, 4, 4);
   bkgd(COLOR_PAIR(4));
 #endif
 

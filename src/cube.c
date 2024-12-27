@@ -31,7 +31,7 @@ CubePoints new_cube(double side_len) {
   /* NOTE: that the names of the points here will be meaningless
    * once you start rotating them, they are only for making
    * sense out of "building" the cube
-	 */
+   */
   // west is x-, east is x+
   // bottom is y-, top is y+
   // south is z+, north is z-
@@ -67,9 +67,9 @@ static void *add_planes(void *cube, int plane_num, int side_len, Point p1,
   // need to cast the void ptr to index it (locally)
   Point(*casted_cube)[CUBE_SIDES][side_len][side_len] = cube;
 
-	// for each point in the two above lines,
-	// we want to draw a perpendicular line between
-	// each pair of parallel points in the lines
+  // for each point in the two above lines,
+  // we want to draw a perpendicular line between
+  // each pair of parallel points in the lines
   for (int line = 0; line < side_len; line++) {
     Point start = first_line[line];
     Point end = second_line[line];
@@ -92,7 +92,7 @@ static void *render_cube(CubePoints cp, int side_len) {
 
   // cp.corners easier access in for loop
   int crn[CUBE_SIDES][4] = {{0, 1, 2, 3}, {4, 5, 6, 7}, {0, 1, 4, 5},
-                   {2, 3, 6, 7}, {0, 2, 4, 6}, {1, 3, 5, 7}};
+                            {2, 3, 6, 7}, {0, 2, 4, 6}, {1, 3, 5, 7}};
 
   // let's try VLA type again
   Point(*cube)[CUBE_SIDES][side_len][side_len] = malloc(sizeof *cube);
@@ -106,7 +106,7 @@ static void *render_cube(CubePoints cp, int side_len) {
 }
 // macro to ensure that when we call this function, the result is
 // casted appropriately
-#define render_cube(CP, SIDE)                                             \
+#define render_cube(CP, SIDE)                                                  \
   ((Point(*)[CUBE_SIDES][SIDE][SIDE])render_cube(CP, SIDE))
 
 // basically just copied these matrices from the web
@@ -205,18 +205,18 @@ static ProjectedPoint to_2d(Point p, double proj_d, double cube_d) {
 // not a real zbuffer, just how i imagine it, if the
 // performance is wildly bad i can look up how to
 // do this properly
+// TODO: zbuffer doesn't need to contain ProjectedPoints, just depths
 void *make_zbuffer(CubePoints *cp, double proj_d, double cube_d, int rows,
-                  int cols) {
+                   int cols) {
 
-	// render cube, cast the void ptr
+  // render cube, cast the void ptr
   Point(*c)[CUBE_SIDES][cp->side][cp->side] = render_cube(*cp, cp->side);
 
   // VLA pointer (variably modified type)
   // super convenient! VLAs without actually using VLAs!
-	// this MUST be supported in C23, so while we're not there yet,
-	// might as well make use of it.
-	// (but the syntax for it is atrocious. oh well!)
-	// TODO: zbuffer doesn't need to contain ProjectedPoints, just depths
+  // this MUST be supported in C23, so while we're not there yet,
+  // might as well make use of it.
+  // (but the syntax for it is atrocious. oh well!)
   ProjectedPoint(*zbuffer)[rows][cols] = (malloc(sizeof *zbuffer));
 
   // initialize for comparison
@@ -227,20 +227,24 @@ void *make_zbuffer(CubePoints *cp, double proj_d, double cube_d, int rows,
     }
   }
 
-	// ugly nested for loop, but well... it's 3 dimensions.
-	// all the memory in the cube should be adjacent to each other
-	// as far as i understand, so all the indirection should be fine
+  // ugly nested for loop, but well... it's 3 dimensions.
+  // all the memory in the cube should be adjacent to each other
+  // as far as i understand, so all the indirection should be fine
   for (int side = 0; side < CUBE_SIDES; side++) {
     for (int line = 0; line < cp->side; line++) {
       for (int point = 0; point < cp->side; point++) {
         ProjectedPoint pr_p = to_2d((*c)[side][line][point], proj_d, cube_d);
+				// offset by half a screen width and height
         int x_index = (cols / 2) + pr_p.x;
         int y_index = (rows / 2) + pr_p.y;
 
+				// if it doesn't fit, discard
         if (x_index < 0 || x_index > cols || y_index < 0 || y_index > rows) {
           continue;
         }
 
+				// if it is closer to camera than whether is already in the buffer,
+				// replace in buffer
         if ((*zbuffer)[y_index][x_index].distance > pr_p.distance) {
           (*zbuffer)[y_index][x_index] = pr_p;
         }
@@ -255,5 +259,5 @@ void *make_zbuffer(CubePoints *cp, double proj_d, double cube_d, int rows,
 }
 // macro to ensure that when we call this function, the result is
 // casted appropriately
-#define make_zbuffer(C, ROWS, COLS)                                             \
+#define make_zbuffer(C, ROWS, COLS)                                            \
   ((ProjectedPoint(*)[ROWS][COLS])make_zbuffer(C, ROWS, COLS))

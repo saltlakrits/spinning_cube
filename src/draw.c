@@ -3,7 +3,7 @@
 
 #include "draw.h"
 
-int bright, medium, dark;
+int bright, medium, dark; // what are these??
 
 void *draw_thread(void *arg) {
   struct DrawArgs *args = arg;

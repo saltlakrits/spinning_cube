@@ -17,7 +17,7 @@
 // target framerate, will not exceed this
 // but can drop below (and the whole animation
 // will slow down).
-#define FRAMERATE 60.0
+#define FRAMERATE 144.0
 #define LIGHT_MODE 1
 
 // if DEBUG is defined, collect and print out
@@ -62,8 +62,11 @@ int main() {
 
 #endif
 
+  unsigned int LINES, COLS;
+
   struct notcurses *nc = notcurses_init(NULL, NULL);
-  struct ncplane *ncp = notcurses_stdplane(nc);
+  // struct ncplane *ncp = notcurses_stdplane(nc);
+  struct ncplane *ncp = notcurses_stddim_yx(nc, &LINES, &COLS);
   struct ncinput *nci;
 
   // combine fg, bg to make channels value, set it as base
@@ -71,9 +74,6 @@ int main() {
   int channels = ncchannels_combine(fg, bg);
   ncplane_set_base(ncp, " ", 0, channels);
   ncplane_erase(ncp);
-
-  unsigned int LINES, COLS;
-  notcurses_stddim_yx(nc, &LINES, &COLS);
 
   // available drawing area; x is divided by 2 becaue
   // we will stretch the drawing by 2 horizontally to

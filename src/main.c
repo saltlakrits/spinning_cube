@@ -41,7 +41,7 @@ int main() {
   struct ncplane *ncp = notcurses_stddim_yx(nc, &LINES, &COLS);
 
 	// not allocating this made everything break :^)
-  struct ncinput *nci = malloc(sizeof *nci);
+  struct ncinput nci;
 
 #ifndef LIGHT_MODE
 #define LIGHT_MODE 0
@@ -149,7 +149,7 @@ int main() {
 
     // enable quitting
     int ch;
-    ch = notcurses_get_nblock(nc, nci);
+    ch = notcurses_get_nblock(nc, &nci);
     if (ch == 'q') {
       break;
     }

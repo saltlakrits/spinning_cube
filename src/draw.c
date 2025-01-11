@@ -37,7 +37,7 @@ void *draw_thread(void *arg) {
           ncplane_set_fg_rgb(args->ncp, medium);
           ncplane_putstr_yx(args->ncp, y, x * args->x_mult, "oo");
         } else if (dist_float < 1.0) {
-          // also darkened oo apparently
+          // also darkened oo apparently, whatever
           ncplane_set_fg_rgb(args->ncp, medium);
           ncplane_putstr_yx(args->ncp, y, x * args->x_mult, "oo");
         } else if (dist_float >= 1.0) {

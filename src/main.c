@@ -17,7 +17,7 @@
 // target framerate, will not exceed this
 // but can drop below (and the whole animation
 // will slow down).
-#define FRAMERATE 144.0
+#define FRAMERATE 60.0 // caps out at about 300 fps with -O3 on my laptop with a tiny tiny font
 #define LIGHT_MODE 1
 
 // if DEBUG is defined, collect and print out
@@ -33,6 +33,15 @@
 // TODO: illumination? zzz
 
 int main() {
+
+  unsigned int LINES, COLS;
+
+  struct notcurses *nc = notcurses_init(NULL, NULL);
+  // struct ncplane *ncp = notcurses_stdplane(nc);
+  struct ncplane *ncp = notcurses_stddim_yx(nc, &LINES, &COLS);
+
+	// not allocating this made everything break :^)
+  struct ncinput *nci = malloc(sizeof *nci);
 
 #ifndef LIGHT_MODE
 #define LIGHT_MODE 0
@@ -61,13 +70,6 @@ int main() {
   int fg = NCCHANNEL_INITIALIZER(0, 0, 0);
 
 #endif
-
-  unsigned int LINES, COLS;
-
-  struct notcurses *nc = notcurses_init(NULL, NULL);
-  // struct ncplane *ncp = notcurses_stdplane(nc);
-  struct ncplane *ncp = notcurses_stddim_yx(nc, &LINES, &COLS);
-  struct ncinput *nci;
 
   // combine fg, bg to make channels value, set it as base
   // for the plane (basically just set a background color)

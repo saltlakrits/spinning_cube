@@ -1,6 +1,6 @@
-CC=gcc
+CC=clang
 OUT = cube
-CFLAGS=-Isrc/ -g
+CFLAGS=-Isrc/ -O3
 SRCDIR = src/
 #OBJDIR = .obj/
 CFILES = $(wildcard $(SRCDIR)*.c)
@@ -14,5 +14,5 @@ LDLIBS = -lnotcurses -lnotcurses-core -lm -lpthread
 
 main: $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) -o $(OUT) $(LDLIBS)
-	#@printf "\n === Compiling program & deleting .o files ===\n"
-	#@rm -rf $(SRCDIR)*.o
+	@printf "\n === Compiling program & deleting .o files ===\n"
+	@rm -rf $(SRCDIR)*.o
